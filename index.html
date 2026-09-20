@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PredictOdds Pro | Event Market & Kalshi Probability Visualizer</title>
+<meta name="description" content="Visual probability calculator, Expected Value (EV) optimizer, Kelly Criterion sizer, and binary arbitrage scanner for Kalshi and Polymarket event contracts.">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-main: #0b0f19;
+    --card-bg: #151c2e;
+    --card-border: #23304a;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent-cyan: #38bdf8;
+    --accent-emerald: #34d399;
+    --accent-rose: #fb7185;
+    --accent-amber: #fbbf24;
+    --accent-purple: #c084fc;
+    --accent-indigo: #818cf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .logo-area h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--accent-cyan);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-area p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .preset-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    scrollbar-width: thin;
+  }
+  .preset-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-secondary);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .preset-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-cyan);
+    background: rgba(56, 189, 248, 0.05);
+  }
+  .preset-btn.active {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+  }
+  .metrics-ribbon {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    padding: 12px 14px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .metric-card .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+  .metric-card .value { font-size: 16px; font-weight: 800; font-family: monospace; margin-top: 4px; }
+  .main-layout {
+    display: grid;
+    grid-template-columns: 370px 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 1080px) {
+    .main-layout { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .input-group {
+    margin-bottom: 12px;
+  }
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .input-group input, .input-group select {
+    width: 100%;
+    background: #0b0f19;
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+  }
+  .input-group input:focus, .input-group select:focus {
+    border-color: var(--accent-cyan);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 18px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    color: var(--accent-cyan);
+    border-bottom-color: var(--accent-cyan);
+  }
+  .chart-wrapper {
+    position: relative;
+    height: 350px;
+    width: 100%;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table th { text-align: left; padding: 10px; color: var(--text-secondary); border-bottom: 1px solid var(--card-border); font-size: 11px; text-transform: uppercase; }
+  table td { padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+  .btn {
+    background: var(--accent-cyan);
+    color: #0b0f19;
+    font-weight: 700;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .btn-outline { background: transparent; border: 1px solid var(--card-border); color: var(--text-primary); }
+  .slider-box {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .range-slider {
+    width: 100%;
+    accent-color: var(--accent-cyan);
+    cursor: pointer;
+  }
+  .badge-yes { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+  .badge-no { background: rgba(251, 113, 133, 0.15); color: var(--accent-rose); padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+  .ev-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .ev-cell {
+    background: #0b0f19;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .ev-cell .lbl { font-size: 11px; color: var(--text-secondary); }
+  .ev-cell .val { font-size: 15px; font-weight: 800; font-family: monospace; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo-area">
+      <h1>ð¯ PredictOdds Pro <span style="font-size:12px; background:rgba(56,189,248,0.15); padding:3px 8px; border-radius:999px; border:1px solid var(--accent-cyan); font-weight:600;">Event Markets (Kalshi/Poly)</span></h1>
+      <p>Visual Expected Value (EV), Kelly Sizing, Probability Curves & Binary Arbitrage for Event Contracts.</p>
+    </div>
+    <div>
+      <button class="btn btn-outline" onclick="window.print()">ð¨ï¸ Export PDF</button>
+    </div>
+  </header>
+
+  <!-- 1-Click Event Market Presets Bar -->
+  <div class="preset-bar">
+    <button class="preset-btn active" onclick="loadPreset('fed_rate')">ðï¸ Fed Interest Rate Cut</button>
+    <button class="preset-btn" onclick="loadPreset('cpi_print')">ð CPI Inflation Print</button>
+    <button class="preset-btn" onclick="loadPreset('sp500_close')">ð S&P 500 Daily Target</button>
+    <button class="preset-btn" onclick="loadPreset('recession')">ð¼ US Recession in 2026</button>
+    <button class="preset-btn" onclick="loadPreset('election')">ð³ï¸ Presidential / Senate Win</button>
+    <button class="preset-btn" onclick="loadPreset('parity_arb')">âï¸ Cross-Exchange Arbitrage</button>
+  </div>
+
+  <!-- Key Metrics Ribbon -->
+  <div class="metrics-ribbon">
+    <div class="metric-card">
+      <div class="label">Event Contract</div>
+      <div class="value" style="color: var(--accent-cyan);" id="dispEventName">Fed 25 bps Cut</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Market Implied Odds</div>
+      <div class="value" id="dispImpliedProb">62.0% (62Â¢)</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">User Assessed Prob</div>
+      <div class="value" style="color: var(--accent-amber);" id="dispUserProb">75.0%</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Expected Value (EV)</div>
+      <div class="value" style="color: var(--accent-emerald);" id="dispEV">+$0.13 / contract</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Expected ROI</div>
+      <div class="value" style="color: var(--accent-emerald);" id="dispROI">+21.0%</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Kelly Bet Size</div>
+      <div class="value" style="color: var(--accent-indigo);" id="dispKelly">34.2% Bankroll</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Configurator Form -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span>âï¸ Contract Parameters</span>
+          <span style="font-size: 11px; color: var(--text-secondary);">Kalshi / Binary Rules</span>
+        </div>
+
+        <div class="input-group">
+          <label>Market / Event Title</label>
+          <input type="text" id="eventName" value="Fed to cut rates by >= 25 bps" oninput="updateAll()">
+        </div>
+
+        <div class="grid-2">
+          <div class="input-group">
+            <label>Contract Side</label>
+            <select id="contractSide" onchange="updateAll()">
+              <option value="yes">YES Contract</option>
+              <option value="no">NO Contract</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Market Price (Â¢ / $)</label>
+            <input type="number" id="marketPrice" value="0.62" step="0.01" min="0.01" max="0.99" oninput="updateAll()">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="input-group">
+            <label>Total Capital / Bankroll ($)</label>
+            <input type="number" id="bankroll" value="1000" step="50" oninput="updateAll()">
+          </div>
+          <div class="input-group">
+            <label>Contracts Quantity</label>
+            <input type="number" id="contractsQty" value="100" step="10" oninput="updateAll()">
+          </div>
+        </div>
+
+        <!-- Slider for User's Assessed Probability -->
+        <div class="slider-box">
+          <div class="slider-header">
+            <span>ð§  Your Estimated Probability:</span>
+            <strong style="color: var(--accent-amber);" id="userProbDisplay">75% True Probability</strong>
+          </div>
+          <input type="range" class="range-slider" id="userProbSlider" min="1" max="99" value="75" oninput="updateUserProb(this.value)">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-secondary); margin-top:4px;">
+            <span>1% Impossible</span>
+            <span>50% Toss-Up</span>
+            <span>99% Certain</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ð¡ Mathematical Edge Insight</div>
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;" id="edgeInsight">
+          <strong>Positive Edge (+13.0%):</strong> Market is pricing this outcome at 62Â¢ (62%), but your assessed true probability is 75%. Buying YES offers a statistically favorable risk-reward profile.
+        </p>
+      </div>
+    </div>
+
+    <!-- Charts & Analytics Panel -->
+    <div>
+      <div class="card">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('ev_chart')">ð Expected Value & Edge Curve</button>
+          <button class="tab-btn" onclick="switchTab('kelly_tab')">ð Kelly Criterion Bankroll Sizer</button>
+          <button class="tab-btn" onclick="switchTab('arb_tab')">âï¸ Binary Parity & Arbitrage</button>
+          <button class="tab-btn" onclick="switchTab('journal_tab')">ð Event Trade Journal</button>
+        </div>
+
+        <!-- Tab 1: EV Curve -->
+        <div id="tab-ev_chart">
+          <div class="chart-wrapper">
+            <canvas id="evCanvas"></canvas>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 10px;">
+            Shows your expected net dollar profit/loss per 100 contracts across different true outcome probabilities ($1.00 payout on win, $0.00 on loss).
+          </div>
+        </div>
+
+        <!-- Tab 2: Kelly Sizing -->
+        <div id="tab-kelly_tab" style="display: none;">
+          <div class="ev-grid">
+            <div class="ev-cell">
+              <div class="lbl">Full Kelly Size</div>
+              <div class="val" style="color: var(--accent-emerald);" id="fullKellyVal">34.2% ($342)</div>
+            </div>
+            <div class="ev-cell">
+              <div class="lbl">Half Kelly (Recommended)</div>
+              <div class="val" style="color: var(--accent-cyan);" id="halfKellyVal">17.1% ($171)</div>
+            </div>
+            <div class="ev-cell">
+              <div class="lbl">Quarter Kelly (Safe)</div>
+              <div class="val" style="color: var(--accent-indigo);" id="quarterKellyVal">8.5% ($85)</div>
+            </div>
+          </div>
+          <div style="margin-top: 18px; font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+            <strong>Kelly Criterion Formula:</strong> $f^* = \frac{b \cdot p - q}{b}$<br>
+            â¢ $p$ = True probability of winning<br>
+            â¢ $q = 1 - p$ = Probability of losing<br>
+            â¢ $b$ = Net payout odds = $(1.00 - \text{Price}) / \text{Price}$<br>
+            <em>Half-Kelly is the institutional gold standard to prevent risk-of-ruin while compounding edge over multiple independent events.</em>
+          </div>
+        </div>
+
+        <!-- Tab 3: Binary Parity & Arbitrage -->
+        <div id="tab-arb_tab" style="display: none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Market Source</th>
+                <th>YES Price</th>
+                <th>NO Price</th>
+                <th>Combined Sum</th>
+                <th>Arbitrage Opportunity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Kalshi Event</strong></td>
+                <td>$0.62 (62Â¢)</td>
+                <td>$0.39 (39Â¢)</td>
+                <td>$1.01 (101Â¢)</td>
+                <td><span style="color:var(--accent-rose)">-1.0% (Taker Fee Spread)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Polymarket Web3</strong></td>
+                <td>$0.58 (58Â¢)</td>
+                <td>$0.42 (42Â¢)</td>
+                <td>$1.00 (100Â¢)</td>
+                <td><span style="color:var(--accent-amber)">Parity Balanced</span></td>
+              </tr>
+              <tr style="background: rgba(52, 211, 153, 0.05); font-weight:700;">
+                <td><strong>Cross-Market Spread</strong></td>
+                <td>Buy Poly (58Â¢)</td>
+                <td>Buy Kalshi NO (39Â¢)</td>
+                <td>$0.97 (97Â¢)</td>
+                <td><span style="color:var(--accent-emerald); font-weight:800;">+3.0% Guaranteed Arb</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="margin-top: 14px; font-size: 12px; color: var(--text-secondary);">
+            When the sum of <strong>Best YES</strong> and <strong>Best NO</strong> across two prediction venues is strictly under $1.00, an atomic risk-free spread exists.
+          </div>
+        </div>
+
+        <!-- Tab 4: Trade Journal -->
+        <div id="tab-journal_tab" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 13px; font-weight: 700;">Recorded Prediction Market Trades</span>
+            <button class="btn" onclick="addEventNote()">+ Log Market Trade</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Event</th>
+                <th>Side</th>
+                <th>Entry Price</th>
+                <th>Qty</th>
+                <th>Assessed Prob</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="journalBody">
+              <tr>
+                <td>2026-09-20</td>
+                <td><strong>Fed Rate Cut >= 25 bps</strong></td>
+                <td><span class="badge-yes">YES</span></td>
+                <td>$0.62</td>
+                <td>100</td>
+                <td>75% (Edge +13%)</td>
+                <td><strong style="color:var(--accent-emerald)">ACTIVE</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentPreset = 'fed_rate';
+  let evChart;
+
+  const PRESETS = {
+    fed_rate: {
+      name: "Fed to cut rates by >= 25 bps",
+      side: "yes",
+      price: 0.62,
+      userProb: 75,
+      desc: "High-probability macroeconomic event. Market price implies 62% odds vs 75% assessed."
+    },
+    cpi_print: {
+      name: "US CPI MoM <= 0.2%",
+      side: "yes",
+      price: 0.44,
+      userProb: 55,
+      desc: "Inflation disinflation trend contract. Implied probability at 44% gives positive expected value."
+    },
+    sp500_close: {
+      name: "S&P 500 Closes Above 5,800",
+      side: "yes",
+      price: 0.51,
+      userProb: 65,
+      desc: "Daily equity momentum event contract."
+    },
+    recession: {
+      name: "NBER Declares US Recession in 2026",
+      side: "no",
+      price: 0.78,
+      userProb: 88,
+      desc: "Betting NO on recession. High probability capital preservation play."
+    },
+    election: {
+      name: "Senate Majority Event",
+      side: "yes",
+      price: 0.50,
+      userProb: 58,
+      desc: "Toss-up election event with slight edge."
+    },
+    parity_arb: {
+      name: "Cross-Market Spread (Kalshi vs Polymarket)",
+      side: "yes",
+      price: 0.58,
+      userProb: 70,
+      desc: "Discrepancy between centralized CFTC market and decentralized Web3 liquidity pool."
+    }
+  };
+
+  function loadPreset(key) {
+    currentPreset = key;
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('onclick').includes(key));
+    });
+
+    const p = PRESETS[key];
+    document.getElementById('eventName').value = p.name;
+    document.getElementById('contractSide').value = p.side;
+    document.getElementById('marketPrice').value = p.price;
+    document.getElementById('userProbSlider').value = p.userProb;
+    updateUserProb(p.userProb);
+  }
+
+  function updateUserProb(val) {
+    document.getElementById('userProbDisplay').innerText = `${val}% True Probability`;
+    updateAll();
+  }
+
+  function updateAll() {
+    const name = document.getElementById('eventName').value || 'Event';
+    const side = document.getElementById('contractSide').value;
+    const price = parseFloat(document.getElementById('marketPrice').value) || 0.50;
+    const userProbPct = parseFloat(document.getElementById('userProbSlider').value) || 50;
+    const userProb = userProbPct / 100;
+    const bankroll = parseFloat(document.getElementById('bankroll').value) || 1000;
+    const qty = parseInt(document.getElementById('contractsQty').value) || 100;
+
+    const impliedProb = price;
+    const edge = userProb - impliedProb;
+
+    // Expected Value per contract: EV = (UserProb * (1 - Price)) - ((1 - UserProb) * Price) = UserProb - Price
+    const evPerContract = userProb - price;
+    const totalCost = price * qty;
+    const totalEV = evPerContract * qty;
+    const roiPct = (evPerContract / price) * 100;
+
+    // Kelly Criterion: f* = (b*p - q) / b where b = (1 - price) / price, q = 1 - p
+    const b = (1.0 - price) / price;
+    const q = 1.0 - userProb;
+    let kellyPct = 0;
+    if (b > 0) {
+      kellyPct = ((b * userProb) - q) / b;
+    }
+    if (kellyPct < 0) kellyPct = 0;
+
+    // Update Ribbon
+    document.getElementById('dispEventName').innerText = name.substring(0, 20) + (name.length > 20 ? '...' : '');
+    document.getElementById('dispImpliedProb').innerText = `${(impliedProb * 100).toFixed(1)}% (${(price * 100).toFixed(0)}Â¢)`;
+    document.getElementById('dispUserProb').innerText = `${userProbPct.toFixed(1)}%`;
+    
+    document.getElementById('dispEV').innerText = `${totalEV >= 0 ? '+' : ''}$${totalEV.toFixed(2)} (${evPerContract >= 0 ? '+' : ''}$${evPerContract.toFixed(2)}/ct)`;
+    document.getElementById('dispEV').style.color = totalEV >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+
+    document.getElementById('dispROI').innerText = `${roiPct >= 0 ? '+' : ''}${roiPct.toFixed(1)}%`;
+    document.getElementById('dispROI').style.color = roiPct >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+
+    document.getElementById('dispKelly').innerText = `${(kellyPct * 100).toFixed(1)}% ($${(bankroll * kellyPct).toFixed(0)})`;
+
+    // Update Kelly Tab
+    document.getElementById('fullKellyVal').innerText = `${(kellyPct * 100).toFixed(1)}% ($${(bankroll * kellyPct).toFixed(0)})`;
+    document.getElementById('halfKellyVal').innerText = `${(kellyPct * 50).toFixed(1)}% ($${(bankroll * kellyPct * 0.5).toFixed(0)})`;
+    document.getElementById('quarterKellyVal').innerText = `${(kellyPct * 25).toFixed(1)}% ($${(bankroll * kellyPct * 0.25).toFixed(0)})`;
+
+    // Edge insight text
+    const edgeColor = edge >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+    document.getElementById('edgeInsight').innerHTML = `
+      <strong>${edge >= 0 ? 'Positive Edge' : 'Negative Edge'} (${(edge * 100).toFixed(1)}%):</strong> 
+      The market price is ${(price * 100).toFixed(0)}Â¢ (${(impliedProb * 100).toFixed(0)}% implied), while your assessed probability is ${(userProb * 100).toFixed(0)}%. 
+      Expected Return per 100 contracts is <strong style="color:${edgeColor}">${totalEV >= 0 ? '+' : ''}$${totalEV.toFixed(2)}</strong> on a $${totalCost.toFixed(2)} position.
+    `;
+
+    // Build Chart Data: EV across probabilities from 0% to 100%
+    const probLabels = [];
+    const evValues = [];
+    const zeroLine = [];
+
+    for (let p = 5; p <= 95; p += 2) {
+      probLabels.push(`${p}%`);
+      const ev = ((p / 100) - price) * qty;
+      evValues.push(ev.toFixed(2));
+      zeroLine.push(0);
+    }
+
+    drawEVChart(probLabels, evValues, zeroLine);
+  }
+
+  function drawEVChart(labels, evData, zeroData) {
+    const ctx = document.getElementById('evCanvas').getContext('2d');
+    if (evChart) evChart.destroy();
+
+    evChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Expected Net Profit / Loss ($) for Position',
+            data: evData,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.08)',
+            borderWidth: 2.5,
+            fill: true,
+            pointRadius: 0
+          },
+          {
+            label: 'Breakeven (0 EV)',
+            data: zeroData,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            borderDash: [4, 4],
+            borderWidth: 1.5,
+            pointRadius: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'True Outcome Probability (%)', color: '#94a3b8' } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Net Expected Return ($)', color: '#94a3b8' } }
+        },
+        plugins: { legend: { labels: { color: '#f8fafc' } } }
+      }
+    });
+  }
+
+  function switchTab(t) {
+    ['ev_chart', 'kelly_tab', 'arb_tab', 'journal_tab'].forEach(id => {
+      document.getElementById(`tab-${id}`).style.display = (id === t) ? 'block' : 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('onclick').includes(t));
+    });
+  }
+
+  function addEventNote() {
+    const note = prompt("Enter event contract thesis / note:");
+    if (!note) return;
+    const tbody = document.getElementById('journalBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${new Date().toISOString().split('T')[0]}</td>
+      <td><strong>${document.getElementById('eventName').value}</strong></td>
+      <td><span class="badge-${document.getElementById('contractSide').value}">${document.getElementById('contractSide').value.toUpperCase()}</span></td>
+      <td>$${document.getElementById('marketPrice').value}</td>
+      <td>${document.getElementById('contractsQty').value}</td>
+      <td>${document.getElementById('userProbSlider').value}% (Logged)</td>
+      <td><span style="color:var(--accent-cyan); font-weight:700;">LOGGED</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  window.onload = () => { loadPreset('fed_rate'); };
+</script>
+</body>
+</html>
