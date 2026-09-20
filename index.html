@@ -240,6 +240,32 @@
     border-color: var(--accent-cyan);
     background: rgba(56, 189, 248, 0.15);
   }
+  .btn-gold {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #0b0f19;
+    border: none;
+    font-weight: 700;
+  }
+  .btn-gold:hover { opacity: 0.9; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-box {
+    background: var(--card-bg);
+    border: 1px solid var(--accent-cyan);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
 </style>
 </head>
 <body>
@@ -250,12 +276,33 @@
       <h1>ð¯ PredictOdds Pro <span style="font-size:12px; background:rgba(56,189,248,0.15); padding:3px 8px; border-radius:999px; border:1px solid var(--accent-cyan); font-weight:600;">Event Markets (Kalshi/Poly)</span></h1>
       <p>Visual Expected Value (EV), Kelly Sizing, Probability Curves & Binary Arbitrage for Event Contracts.</p>
     </div>
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
       <a href="https://vhomesai.github.io/options-strat-pro/" class="nav-pill" style="text-decoration:none;">ð Options Pro</a>
       <a href="https://vhomesai.github.io/predictodds-pro/" class="nav-pill active" style="text-decoration:none;">ð¯ PredictOdds Pro (Kalshi)</a>
-      <button class="btn btn-outline" onclick="window.print()">ð¨ï¸ Export PDF</button>
+      <button class="btn btn-gold" onclick="openSupportModal()">â Support Tool</button>
+      <button class="btn btn-outline" onclick="window.print()">ð¨ï¸ PDF</button>
     </div>
   </header>
+
+  <!-- Support Modal -->
+  <div class="modal-overlay" id="supportModal" onclick="closeSupportModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3 style="color:var(--accent-amber); margin-bottom:8px; font-size:16px;">â Support PredictOdds Pro</h3>
+      <p style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px;">
+        PredictOdds Pro is an independent, 100% ad-free prediction market tool. Tips help fund automated cross-exchange arbitrage scrapers and new feature development!
+      </p>
+      <div style="background:#0b0f19; padding:12px; border-radius:8px; border:1px solid var(--card-border); margin-bottom:14px; font-size:12px;">
+        <strong>ð Pro Roadmap in Development:</strong><br>
+        â¢ Live Real-Time Kalshi & Polymarket Webhook Feeds<br>
+        â¢ Automated Mispricing & Cross-Arb Alerts<br>
+        â¢ Dynamic Multi-Outcome Bracket Sizers
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeSupportModal()">Close</button>
+        <button class="btn btn-gold" onclick="alert('Thank you for your support! Set up your Stripe or BuyMeACoffee payment link here.'); closeSupportModal();">â Tip $5 / Supporter</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 1-Click Event Market Presets Bar -->
   <div class="preset-bar">
@@ -679,6 +726,15 @@
       <td><span style="color:var(--accent-cyan); font-weight:700;">LOGGED</span></td>
     `;
     tbody.appendChild(tr);
+  }
+
+  function openSupportModal() {
+    document.getElementById('supportModal').style.display = 'flex';
+  }
+  function closeSupportModal(e) {
+    if (!e || e.target === document.getElementById('supportModal') || e.target.tagName === 'BUTTON') {
+      document.getElementById('supportModal').style.display = 'none';
+    }
   }
 
   window.onload = () => { loadPreset('fed_rate'); };
