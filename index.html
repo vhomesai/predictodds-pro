@@ -217,13 +217,29 @@
   }
   .ev-cell {
     background: #0b0f19;
+  .nav-pill {
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
     border: 1px solid var(--card-border);
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
+    background: var(--card-bg);
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-  .ev-cell .lbl { font-size: 11px; color: var(--text-secondary); }
-  .ev-cell .val { font-size: 15px; font-weight: 800; font-family: monospace; margin-top: 4px; }
+  .nav-pill:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-cyan);
+    background: rgba(56, 189, 248, 0.08);
+  }
+  .nav-pill.active {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+    background: rgba(56, 189, 248, 0.15);
+  }
 </style>
 </head>
 <body>
@@ -234,7 +250,9 @@
       <h1>ð¯ PredictOdds Pro <span style="font-size:12px; background:rgba(56,189,248,0.15); padding:3px 8px; border-radius:999px; border:1px solid var(--accent-cyan); font-weight:600;">Event Markets (Kalshi/Poly)</span></h1>
       <p>Visual Expected Value (EV), Kelly Sizing, Probability Curves & Binary Arbitrage for Event Contracts.</p>
     </div>
-    <div>
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <a href="https://vhomesai.github.io/options-strat-pro/" class="nav-pill" style="text-decoration:none;">ð Options Pro</a>
+      <a href="https://vhomesai.github.io/predictodds-pro/" class="nav-pill active" style="text-decoration:none;">ð¯ PredictOdds Pro (Kalshi)</a>
       <button class="btn btn-outline" onclick="window.print()">ð¨ï¸ Export PDF</button>
     </div>
   </header>
